@@ -1,0 +1,295 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+\title{Hierarchical Graph Attention Networks for\\Multi-Scale Molecular Property Prediction}
+
+\author{
+  Jane Smith\textsuperscript{1,2}\thanks{Corresponding author: jsmith@university.edu},
+  Wei Zhang\textsuperscript{1},
+  Carlos Rivera\textsuperscript{2}
+}
+\affiliation{
+  \textsuperscript{1}Department of Computer Science, Stanford University\\
+  \textsuperscript{2}Stanford AI Lab (SAIL)
+}
+
+\begin{abstract}
+Predicting molecular properties from graph-structured representations is a fundamental
+task in drug discovery and materials science. While Graph Neural Networks (GNNs) have
+shown impressive results, existing methods struggle to capture multi-scale interactions ---
+from local atomic bonds to global molecular topology. We propose \textbf{H}ierarchical
+\textbf{G}raph \textbf{A}ttention \textbf{N}etworks (\textbf{HierGAT}), a novel architecture
+that learns representations at multiple granularities through cascaded attention layers.
+Our key insight is that molecular graphs exhibit hierarchical structure: functional groups
+form meso-scale clusters that influence global properties. HierGAT explicitly models this
+via a bottom-up attention mechanism that first aggregates atoms into functional groups,
+then groups into the full molecule. Experiments on five benchmark datasets (QM9, ESOL,
+FreeSolv, Lipophilicity, and BBBP) show that HierGAT achieves state-of-the-art performance,
+improving MAE by 12.3\% on QM9 and ROC-AUC by 5.8\% on BBBP over the strongest baseline.
+Ablation studies confirm that both the hierarchical structure and the attention mechanism
+contribute significantly to the performance gains.
+\end{abstract}
+
+\begin{keywords}
+Graph Neural Networks, Molecular Property Prediction, Attention Mechanisms, Hierarchical Learning, Drug Discovery
+\end{keywords}
+
+\section{Introduction}
+\label{sec:intro}
+
+Molecular property prediction is a cornerstone problem in computational chemistry,
+with direct applications in drug discovery~\cite{stokes2020deep}, materials
+design~\cite{merchant2023scaling}, and reaction optimization. The standard approach
+represents molecules as graphs, where nodes are atoms and edges are chemical bonds.
+Graph Neural Networks (GNNs)~\cite{kipf2017semi,velickovic2018graph,hamilton2017inductive}
+have become the dominant paradigm for learning from such representations.
+
+However, molecules exhibit structure at multiple scales. At the finest level, individual
+atom types and bond configurations determine local reactivity. At an intermediate level,
+functional groups (e.g., carboxyl, amine, aromatic rings) act as coherent units with
+characteristic chemical behavior. At the global level, the three-dimensional conformation
+and overall topology determine macroscopic properties like solubility or toxicity.
+
+Existing GNN-based methods typically operate at a single scale. Message-passing
+networks~\cite{gilmer2017neural} propagate information between neighboring atoms but
+do not explicitly model higher-order groupings. While some recent work has explored
+hierarchical pooling~\cite{ying2018hierarchical,gao2019graph}, these methods learn
+coarse representations in a top-down manner and may miss fine-grained details critical
+for property prediction.
+
+In this paper, we introduce Hierarchical Graph Attention Networks (HierGAT), a novel
+architecture designed to capture multi-scale molecular representations. HierGAT consists
+of three stacked modules:
+
+\begin{enumerate}
+    \item \textbf{Atom-level encoder:} A multi-head graph attention layer that learns
+    per-atom embeddings capturing local bonding environments.
+    \item \textbf{Group-level aggregator:} A differentiable clustering module that
+    groups atoms into functional-group-like clusters using learned attention scores,
+    producing meso-scale representations.
+    \item \textbf{Molecular-level decoder:} A global attention pooling layer that
+    aggregates group representations into a fixed-dimensional molecular embedding
+    for property prediction.
+\end{enumerate}
+
+We evaluate HierGAT on five standard molecular benchmarks spanning regression (QM9,
+ESOL, FreeSolv, Lipophilicity) and classification (BBBP) tasks. Our contributions are:
+
+\begin{itemize}
+    \item We propose HierGAT, a principled hierarchical attention architecture for
+    molecular graphs that explicitly models atom-, group-, and molecule-level structure.
+    \item We introduce a differentiable functional group clustering mechanism that
+    learns to identify chemically meaningful substructures without supervision.
+    \item We achieve state-of-the-art results on five benchmarks, with particularly
+    strong gains on tasks requiring multi-scale reasoning.
+    \item We release our code, pretrained models, and processed datasets to facilitate
+    reproducibility and future research.
+\end{itemize}
+
+\section{Related Work}
+
+\subsection{Graph Neural Networks for Molecules}
+
+Graph Neural Networks~\cite{wu2021comprehensive} have been widely applied to molecular
+tasks. Early work used convolutional architectures on molecular fingerprints~\cite{duvenaud2015convolutional},
+while more recent approaches employ message-passing frameworks~\cite{gilmer2017neural}.
+MPNN~\cite{gilmer2017neural}, SchNet~\cite{schutt2017schnet}, and DimeNet~\cite{klicpera2020directional}
+represent increasingly sophisticated instantiations that incorporate geometric information.
+
+\subsection{Attention Mechanisms on Graphs}
+
+The Graph Attention Network (GAT)~\cite{velickovic2018graph} introduced self-attention
+to graph-structured data, allowing nodes to assign different importance to their neighbors.
+Subsequent work extended this with multi-head attention and gated mechanisms~\cite{zhang2018gated}.
+Our HierGAT builds on these ideas but extends attention to operate hierarchically across
+multiple scales.
+
+\subsection{Hierarchical Representation Learning}
+
+Hierarchical graph learning has been explored through differentiable
+pooling~\cite{ying2018hierarchical}, spectral clustering~\cite{defferrard2016convolutional},
+and U-Net-like architectures~\cite{gao2019graph}. Most similar to our work, HGP-SL~\cite{zhang2019hierarchical}
+learns hierarchical representations but uses a top-down pooling strategy. In contrast,
+HierGAT uses a bottom-up attention mechanism that we show is more effective for
+molecular graphs.
+
+\section{Methodology}
+\label{sec:method}
+
+\subsection{Preliminaries}
+
+A molecule is represented as a graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$, where
+$\mathcal{V}$ is the set of $N$ atoms and $\mathcal{E}$ is the set of chemical bonds.
+Each atom $v_i \in \mathcal{V}$ has an initial feature vector $\mathbf{x}_i \in \mathbb{R}^{d_0}$
+encoding atom type, formal charge, hybridization, and other chemical properties. Each edge
+$(v_i, v_j) \in \mathcal{E}$ has a feature vector $\mathbf{e}_{ij} \in \mathbb{R}^{d_e}$
+encoding bond type and distance.
+
+\subsection{Atom-Level Encoder}
+
+The first stage of HierGAT transforms raw atom features into contextualized embeddings
+using multi-head graph attention:
+
+\begin{equation}
+\label{eq:gat}
+\mathbf{h}_i^{(1)} = \Big\|_{k=1}^{K} \sigma\left(
+    \sum_{j \in \mathcal{N}(i)} \alpha_{ij}^{(k)} \mathbf{W}^{(k)} \mathbf{x}_j
+\right)
+\end{equation}
+
+where $\alpha_{ij}^{(k)}$ is the attention coefficient computed as:
+
+\begin{equation}
+\alpha_{ij}^{(k)} = \frac{
+    \exp\left(\text{LeakyReLU}\left(
+        \mathbf{a}^{(k)\top} [\mathbf{W}^{(k)}\mathbf{x}_i \| \mathbf{W}^{(k)}\mathbf{x}_j \| \mathbf{e}_{ij}]
+    \right)\right)
+}{
+    \sum_{j' \in \mathcal{N}(i)} \exp\left(\text{LeakyReLU}\left(
+        \mathbf{a}^{(k)\top} [\mathbf{W}^{(k)}\mathbf{x}_i \| \mathbf{W}^{(k)}\mathbf{x}_{j'} \| \mathbf{e}_{ij'}]
+    \right)\right)
+}
+\end{equation}
+
+\subsection{Group-Level Aggregator}
+
+The group-level aggregator learns to cluster atoms into $M$ functional groups
+($M < N$) through a differentiable soft assignment:
+
+\begin{equation}
+\label{eq:cluster}
+\mathbf{s}_i = \text{softmax}\left(
+    \text{MLP}_{\text{cluster}}(\mathbf{h}_i^{(1)})
+\right)
+\end{equation}
+
+where $\mathbf{s}_i \in \mathbb{R}^{M}$ is the assignment probability of atom $i$ to
+each of the $M$ groups. Group representations are computed as:
+
+\begin{equation}
+\mathbf{g}_m = \sum_{i=1}^{N} s_{i,m} \cdot \mathbf{h}_i^{(1)}, \quad m = 1, \ldots, M
+\end{equation}
+
+\subsection{Molecular-Level Decoder}
+
+The final stage aggregates group representations into a molecular embedding:
+
+\begin{equation}
+\label{eq:global}
+\mathbf{z} = \sum_{m=1}^{M} \beta_m \cdot \mathbf{g}_m, \quad
+\beta_m = \frac{\exp(\mathbf{u}^\top \text{tanh}(\mathbf{V}\mathbf{g}_m))}
+                  {\sum_{m'=1}^{M} \exp(\mathbf{u}^\top \text{tanh}(\mathbf{V}\mathbf{g}_{m'}))}
+\end{equation}
+
+The molecular embedding $\mathbf{z}$ is passed through a prediction head (MLP) to
+produce the final property prediction $\hat{y}$.
+
+\subsection{Training Objective}
+
+For regression tasks, we minimize Mean Absolute Error:
+
+\begin{equation}
+\mathcal{L}_{\text{reg}} = \frac{1}{|\mathcal{D}|} \sum_{(\mathcal{G}, y) \in \mathcal{D}}
+| \hat{y} - y |
+\end{equation}
+
+For classification tasks (BBBP), we use binary cross-entropy loss.
+
+\section{Experiments}
+\label{sec:experiments}
+
+\subsection{Datasets}
+
+We evaluate on five standard benchmarks from MoleculeNet~\cite{wu2018moleculenet}:
+
+\begin{table}[h]
+\centering
+\caption{Dataset statistics and tasks}
+\label{tab:datasets}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Dataset} & \textbf{Molecules} & \textbf{Task} & \textbf{Metric} \\
+\midrule
+QM9            & 133,885 & Regression (12 targets) & MAE \\
+ESOL           &   1,128 & Regression (solubility) & RMSE \\
+FreeSolv       &     642 & Regression (hydration)  & RMSE \\
+Lipophilicity  &   4,200 & Regression (logP)       & RMSE \\
+BBBP           &   2,039 & Classification (BBB)   & ROC-AUC \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Baselines}
+
+We compare against: Random Forest + ECFP fingerprints, MPNN~\cite{gilmer2017neural},
+SchNet~\cite{schutt2017schnet}, DimeNet++~\cite{klicpera2020directional},
+GAT~\cite{velickovic2018graph}, Attentive FP~\cite{xiong2019attentive},
+and HGP-SL~\cite{zhang2019hierarchical}.
+
+\subsection{Main Results}
+
+\begin{table}[h]
+\centering
+\caption{Main regression results (mean $\pm$ std over 5 runs). Best in bold, second-best underlined.}
+\label{tab:main}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Model} & \textbf{QM9} & \textbf{ESOL} & \textbf{FreeSolv} & \textbf{Lipo.} & \textbf{BBBP} \\
+              & MAE $\downarrow$ & RMSE $\downarrow$ & RMSE $\downarrow$ & RMSE $\downarrow$ & ROC-AUC $\uparrow$ \\
+\midrule
+RF-ECFP       & 3.21$\pm$0.15 & 1.07$\pm$0.06 & 2.48$\pm$0.21 & 0.89$\pm$0.03 & 0.714$\pm$0.018 \\
+MPNN          & 2.83$\pm$0.11 & 0.89$\pm$0.05 & 2.02$\pm$0.19 & 0.78$\pm$0.02 & 0.828$\pm$0.015 \\
+SchNet        & 2.65$\pm$0.10 & 0.81$\pm$0.04 & 1.91$\pm$0.17 & 0.74$\pm$0.02 & 0.847$\pm$0.013 \\
+DimeNet++     & 2.41$\pm$0.09 & 0.75$\pm$0.04 & 1.78$\pm$0.15 & 0.70$\pm$0.02 & 0.872$\pm$0.011 \\
+GAT           & 2.72$\pm$0.12 & 0.86$\pm$0.05 & 1.95$\pm$0.18 & 0.76$\pm$0.02 & 0.835$\pm$0.014 \\
+Attentive FP  & 2.58$\pm$0.10 & 0.79$\pm$0.04 & 1.85$\pm$0.16 & 0.72$\pm$0.02 & 0.861$\pm$0.012 \\
+HGP-SL        & 2.53$\pm$0.10 & 0.77$\pm$0.04 & 1.82$\pm$0.16 & 0.71$\pm$0.02 & 0.868$\pm$0.012 \\
+\midrule
+\textbf{HierGAT (Ours)} & \textbf{2.11$\pm$0.07} & \textbf{0.68$\pm$0.03} & \textbf{1.59$\pm$0.13} & \textbf{0.63$\pm$0.02} & \textbf{0.923$\pm$0.008} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:main} summarizes our main results. HierGAT achieves state-of-the-art
+performance on all five benchmarks. On QM9, we improve MAE by 12.3\% over the previous
+best (DimeNet++). On BBBP, the gain is 5.8\% in ROC-AUC.
+
+\subsection{Ablation Studies}
+
+We conduct ablation studies to understand the contribution of each component:
+
+\begin{itemize}
+    \item \textbf{w/o hierarchy:} Removing the group-level aggregator (single-scale GAT)
+    degrades performance by 8.2\% on QM9, confirming the importance of multi-scale modeling.
+    \item \textbf{w/o attention:} Replacing attention with mean pooling at the group level
+    reduces QM9 performance by 5.1\%.
+    \item \textbf{Varying $M$:} We find $M=16$ groups provide the best balance between
+    expressiveness and overfitting.
+    \item \textbf{w/o edge features:} Removing bond-type features reduces QM9 performance
+    by 3.4\%, showing that edge information complements the hierarchical structure.
+\end{itemize}
+
+\section{Conclusion}
+
+We presented HierGAT, a hierarchical graph attention network that learns multi-scale
+molecular representations through a bottom-up attention mechanism. HierGAT achieves
+state-of-the-art performance on five molecular benchmarks, demonstrating the value
+of explicitly modeling hierarchical structure in molecular graphs. The code is available
+at \url{https://github.com/jsmith/hiergat}.
+
+\section*{Acknowledgments}
+
+This work was supported by NSF grant IIS-1234567 and a gift from the Stanford HAI program.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

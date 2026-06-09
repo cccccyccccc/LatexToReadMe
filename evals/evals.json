@@ -1,0 +1,56 @@
+{
+  "skill_name": "readme-generator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I have a research paper (paper.tex) and a Python codebase in this project. Please generate a comprehensive GitHub README.md for this repository.",
+      "expected_output": "A clean, developer-first README (~150-300 lines) with verified badges, no hallucinated content, no HTML wrappers, and installation coming before methodology.",
+      "files": ["evals/files/paper-repo"],
+      "expectations": [
+        "README.md is between 150-400 lines (not too short, not too long)",
+        "Badge information is verifiable from actual files: Python version from setup.py, License from LICENSE, arXiv from .bib",
+        "No hallucinated badges (e.g., code-style:black when no black config exists)",
+        "No HTML wrappers like <div align='center'>",
+        "No raw LaTeX commands in prose (no \\begin{...}, \\cite{...}, \\ref{...}, \\label{...})",
+        "Equations use $$...$$ display blocks on their own line — never $...$ inline math (Typora compatibility)",
+        "No spacing tweaks (\\!, \\,, \\quad, \\qquad) in equations",
+        "Every equation block is followed by a plain-language explanation sentence",
+        "Installation section comes before Methodology section (developer-first ordering)",
+        "Installation commands are derived from actual dependency files (pip install -r requirements.txt)",
+        "No invented content: no virtual env instructions, no docker commands unless they exist in the project",
+        "No redundancy: no separate dependency table if requirements.txt is already shown, no separate Reproducibility section duplicating training commands",
+        "Citation BibTeX is the exact entry from references.bib (smith2025hiergat), not reconstructed from LaTeX metadata",
+        "arXiv badge uses the actual arXiv ID (2503.12345) from the .bib file, not a placeholder"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Please generate a Chinese (中文) README for this project.",
+      "expected_output": "A Chinese README where technical descriptions flow naturally in Chinese, code blocks and BibTeX remain in English, and the translation reads like native technical Chinese, not word-for-word translation.",
+      "files": ["evals/files/paper-repo"],
+      "expectations": [
+        "README.md descriptive text is primarily in Chinese",
+        "Code blocks, terminal commands, and BibTeX entries are preserved in English",
+        "Chinese translation is meaning-based, not word-for-word (e.g., '自底向上的注意力机制' not '底向上注意机制')",
+        "Technical terms are correctly translated to standard Chinese ML terminology",
+        "No English sentences mixed into Chinese paragraphs (occasional English technical terms like 'HierGAT' are acceptable)",
+        "Citation BibTeX is preserved exactly as-is in English",
+        "Equations use $$...$$ blocks with clean LaTeX (no spacing tweaks) and have plain-language explanations"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Generate a minimal/short README for this research code repository — just the essentials.",
+      "expected_output": "A compact README under 150 lines with only: title, badges, overview, installation, quick start, citation. No methodology, no results tables, no project structure.",
+      "files": ["evals/files/paper-repo"],
+      "expectations": [
+        "README.md is under 150 lines",
+        "Includes: title, abstract/overview, installation, quick start, citation",
+        "Does NOT include detailed methodology section",
+        "Does NOT include results tables or experiment details",
+        "All badge URLs are complete (no empty parentheses like '()')",
+        "Citation BibTeX is correct and complete"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+# HierGAT configuration for QM9 dataset
+# See paper Section 4 for hyperparameter details
+
+model:
+  name: "HierGAT"
+  in_dim: 37          # Atom features (type, charge, hybridization, etc.)
+  hidden_dim: 128
+  num_groups: 16       # M functional groups
+  heads: 8             # Attention heads
+  dropout: 0.1
+  num_tasks: 12        # QM9 has 12 regression targets
+
+training:
+  epochs: 300
+  batch_size: 128
+  lr: 0.001
+  weight_decay: 1e-5
+  scheduler: "reduce_on_plateau"
+  scheduler_patience: 20
+  scheduler_factor: 0.5
+  early_stop_patience: 50
+  seed: 42
+
+data:
+  dataset: "QM9"
+  split_scheme: "scaffold"
+  train_ratio: 0.8
+  val_ratio: 0.1
+  test_ratio: 0.1
+  num_workers: 4
+
+logging:
+  wandb: false
+  save_every: 10
+  checkpoint_dir: "./checkpoints/qm9"
