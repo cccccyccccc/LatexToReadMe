@@ -1,0 +1,17 @@
+{
+  "skill_name": "latex-to-readme",
+  "paper": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+  "arxiv": "1810.04805",
+  "authors": "Jacob Devlin, Ming-Wei Chang, Kenton Lee, Kristina Toutanova (Google AI)",
+  "year": 2019,
+  "venue": "NAACL-HLT 2019",
+  "expectations": [
+    "README.md contains the paper title 'BERT: Pre-training of Deep Bidirectional Transformers'",
+    "README.md includes MLM and NSP pre-training objectives",
+    "README.md includes GLUE and SQuAD benchmark results",
+    "README.md includes installation steps",
+    "README.md includes citation in BibTeX format",
+    "Equations use $$ blocks on separate lines with plain-language explanations",
+    "No inline $...$ math, no spacing tweaks, no HTML wrappers"
+  ]
+}
