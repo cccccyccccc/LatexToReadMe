@@ -7,14 +7,16 @@
 
 ## Overview
 
-**BERT** (Bidirectional Encoder Representations from Transformers) is a language representation model that pre-trains deep bidirectional representations from unlabeled text by jointly conditioning on both left and right context in all layers. Unlike previous models that were either left-to-right (GPT) or shallowly bidirectional (ELMo), BERT's deep bidirectionality enables it to capture context from both directions simultaneously, leading to state-of-the-art results across a wide range of NLP tasks with minimal task-specific architecture changes.
+Before BERT, language models were forced to choose: process text **left-to-right** (GPT, limiting context to preceding words) or be only **shallowly bidirectional** (ELMo, concatenating independent left and right LSTMs). Neither approach could fully exploit context from both directions in deep networks.
 
-Published at NAACL-HLT 2019 by Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova (Google AI Language), BERT fundamentally changed how NLP models are built: instead of training task-specific architectures from scratch, practitioners fine-tune a single pre-trained BERT model on downstream tasks. At the time of release, BERT obtained state-of-the-art results on **11 NLP tasks**, including pushing the GLUE benchmark to 80.5% (+7.7 points absolute improvement), MultiNLI accuracy to 86.7% (+4.6), and SQuAD v1.1 F1 to 93.2 (+1.5).
+**BERT** solved this by introducing **Masked Language Modeling (MLM)**: randomly mask 15% of input tokens and train a deep Transformer encoder to predict them from surrounding context — both left and right. Coupled with a **Next Sentence Prediction (NSP)** auxiliary task, BERT learns sentence-level relationships alongside token-level understanding. The architecture itself is a standard multi-layer bidirectional Transformer encoder, scaled to 110M (BERT_base: 12 layers, 768 hidden, 12 heads) or 340M parameters (BERT_large: 24 layers, 1024 hidden, 16 heads), pre-trained on BooksCorpus (800M words) and English Wikipedia (2,500M words).
 
-Two model sizes are available:
+At release, BERT achieved state-of-the-art on **11 NLP benchmarks** in a single stroke — pushing GLUE to 80.5% (+7.7 points over the previous best), MultiNLI to 86.7% (+4.6), SQuAD v1.1 F1 to 93.2 (+1.5), and SQuAD v2.0 F1 to 83.3 (approaching human performance at 89.0). Unlike prior approaches that required task-specific architectures, BERT demonstrated that a single pre-trained model could be fine-tuned with one additional output layer to match or surpass heavily engineered task-specific systems.
 
-| Model | Layers (L) | Hidden (H) | Heads (A) | Parameters |
-|-------|:----------:|:----------:|:---------:|:----------:|
+Published at NAACL-HLT 2019 by Devlin, Chang, Lee, and Toutanova (Google AI Language), BERT transformed NLP from an **architecture-engineering** discipline into a **data-and-pretraining** one — establishing the "pre-train then fine-tune" paradigm that underpins virtually every modern language model. This repo provides a PyTorch implementation of the pre-training pipeline (MLM + NSP) and the BERT model architecture.
+
+| Model | Layers | Hidden | Heads | Params |
+|-------|:------:|:------:|:-----:|:------:|
 | BERT_base | 12 | 768 | 12 | 110M |
 | BERT_large | 24 | 1024 | 16 | 340M |
 

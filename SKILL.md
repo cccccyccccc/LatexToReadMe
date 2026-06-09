@@ -88,9 +88,45 @@ a BibTeX entry from the paper metadata but flag it for user review.
 [Badges — only verified ones. See badge rules.]
 
 ## Overview
-[120–200 words. (1) What the model DOES, not "this repo contains". (2) Why it
-matters — the key insight, what it replaced. (3) Key numbers with context. (4)
-Authors and venue woven naturally into the text. Avoid "we propose a novel".]
+
+[150–250 words. A self-contained summary that tells the full story. Structure
+it as a mini-article with these beats — each one sentence, in this order:]
+
+1. **Problem.** What was the state of the art, and what was wrong with it?
+   Open with the model name in bold. Example: "**ResNet** addressed a
+   counterintuitive problem: deeper networks performed _worse_ than shallower
+   ones, despite having more capacity."
+
+2. **Key insight.** The one idea that makes this paper special. What did they
+   change? Example: "Instead of learning a direct mapping, each layer learns
+   the **residual** — the difference between input and desired output — making
+   it trivial for the network to preserve information across layers."
+
+3. **How it works.** Two or three sentences on the architecture or method.
+   Use concrete numbers (layers, parameters, dimensions). Mention the
+   training setup if it's notable (data scale, hardware, training time).
+
+4. **Results.** Key numbers with baseline comparison. Always show the delta,
+   not just the absolute. Example: "ResNet-152 achieved 3.57% top-5 error on
+   ImageNet, winning ILSVRC 2015 and outperforming the previous best ensemble
+   by a wide margin while using **fewer** FLOPs than the much shallower VGG-19."
+
+5. **Impact.** What did this paper enable or change? For landmark papers
+   (Transformer, ResNet, BERT, GANs), connect to the broader legacy. For
+   niche papers, describe the specific contribution to that field.
+
+6. **Repo.** One sentence on what this specific repository provides. Weave
+   in the authors and venue naturally. Example: "Published at CVPR 2016 by
+   He, Zhang, Ren, and Sun (Microsoft Research), this repo provides a
+   PyTorch implementation with the original 90-epoch training protocol."
+
+Key result numbers may also be pulled out into a small table immediately
+after the overview paragraph for visual emphasis.
+
+Tone: confident, concrete, conversational. Write like a well-edited
+technology blog post, not an academic abstract. Kill phrases like "we
+propose a novel", "to the best of our knowledge", "extensive experiments
+demonstrate". Replace with declarative statements and numbers.
 
 ## Installation
 [Exact commands from the actual dependency file. No virtual env, no Docker
